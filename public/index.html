@@ -59,6 +59,27 @@
       cursor: pointer;
       accent-color: #0f0;
     }
+    #anim-speed {
+      position: fixed;
+      bottom: 130px;
+      right: 30px;
+      background: rgba(0, 0, 0, 0.8);
+      color: #0f0;
+      border: 2px solid rgba(0, 255, 0, 0.5);
+      padding: 12px 20px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+      display: none;
+      pointer-events: auto;
+    }
+    #anim-slider {
+      width: 150px;
+      margin-top: 8px;
+      cursor: pointer;
+      accent-color: #0f0;
+    }
     #play-pause:hover { background: rgba(0, 50, 0, 0.9); }
     #crosshair {
       position: fixed;
@@ -117,6 +138,11 @@
     <br>
     <input type="range" id="poll-slider" min="1" max="60" value="5" step="1">
   </div>
+  <div id="anim-speed">
+    SPEED: <span id="anim-ms">50</span>ms
+    <br>
+    <input type="range" id="anim-slider" min="10" max="500" value="50" step="10">
+  </div>
   <div id="crosshair"></div>
   <div id="atom-hud">
     <div>ATOM: <span id="atom-element">-</span></div>
@@ -130,6 +156,9 @@
     const pollIntervalEl = document.getElementById('poll-interval')
     const pollSecondsEl = document.getElementById('poll-seconds')
     const pollSliderEl = document.getElementById('poll-slider')
+    const animSpeedEl = document.getElementById('anim-speed')
+    const animMsEl = document.getElementById('anim-ms')
+    const animSliderEl = document.getElementById('anim-slider')
     const hudEl = document.getElementById('hud')
     const atomHudEl = document.getElementById('atom-hud')
     const atomElementEl = document.getElementById('atom-element')
@@ -145,6 +174,7 @@
     let frames = []
     let atoms = []
     let atomSpheres = []
+    let frameInterval = 50 // ms between animation frames
 
     // CPK colors (RGB 0-1)
     const CPK_COLORS = {
@@ -225,6 +255,7 @@
         hudEl.style.display = hudVisible ? 'block' : 'none'
         playPauseBtn.style.display = hudVisible ? 'block' : 'none'
         pollIntervalEl.style.display = hudVisible ? 'block' : 'none'
+        animSpeedEl.style.display = hudVisible ? 'block' : 'none'
       }
 
       // Toggle atom HUD with 'y' key
@@ -478,7 +509,6 @@
     let animateStarted = false
     let frameCounter = 0
     let lastFrameTime = 0
-    const frameInterval = 50 // 20 fps (50ms between frames)
 
     function animate(timestamp) {
       if (!animateStarted) {
@@ -487,7 +517,7 @@
         lastFrameTime = timestamp
       }
 
-      // Update at ~20fps regardless of render rate
+      // Update based on user-controlled frame interval
       if (timestamp - lastFrameTime >= frameInterval) {
         if (playing && frames.length > 0) {
           currentFrame = (currentFrame + 1) % frames.length
@@ -634,6 +664,11 @@
         clearInterval(pollTimer)
         pollTimer = setInterval(checkForNewFrames, pollIntervalSeconds * 1000)
       }
+    }
+
+    animSliderEl.oninput = () => {
+      frameInterval = parseInt(animSliderEl.value)
+      animMsEl.textContent = frameInterval
     }
 
     loadAll().catch(err => {
