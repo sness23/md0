@@ -176,6 +176,11 @@
     let atomSpheres = []
     let frameInterval = 500 // ms between animation frames
 
+    // Trajectory smoothing state
+    let previousPositions = null // Store old atom positions before trajectory update
+    let transitionProgress = 1.0 // 0.0 = fully old positions, 1.0 = fully new positions
+    const transitionDuration = 1000 // ms to blend from old to new trajectory
+
     // CPK colors (RGB 0-1)
     const CPK_COLORS = {
       'H': [1.0, 1.0, 1.0],    // white
@@ -500,16 +505,33 @@
       const nextFrame = frames[(currentFrame + 1) % frames.length]
 
       for (let i = 0; i < atomSpheres.length && i < frame.x.length; i++) {
+        // First, calculate target position (with frame-to-frame interpolation)
+        let targetX, targetY, targetZ
+
         if (alpha < 1.0 && nextFrame) {
           // Linear interpolation between current and next frame
-          atomSpheres[i].position.x = frame.x[i] + (nextFrame.x[i] - frame.x[i]) * alpha
-          atomSpheres[i].position.y = frame.y[i] + (nextFrame.y[i] - frame.y[i]) * alpha
-          atomSpheres[i].position.z = frame.z[i] + (nextFrame.z[i] - frame.z[i]) * alpha
+          targetX = frame.x[i] + (nextFrame.x[i] - frame.x[i]) * alpha
+          targetY = frame.y[i] + (nextFrame.y[i] - frame.y[i]) * alpha
+          targetZ = frame.z[i] + (nextFrame.z[i] - frame.z[i]) * alpha
         } else {
           // No interpolation, use exact frame
-          atomSpheres[i].position.x = frame.x[i]
-          atomSpheres[i].position.y = frame.y[i]
-          atomSpheres[i].position.z = frame.z[i]
+          targetX = frame.x[i]
+          targetY = frame.y[i]
+          targetZ = frame.z[i]
+        }
+
+        // Second, blend with previous positions if we're in a transition
+        if (transitionProgress < 1.0 && previousPositions && i < previousPositions.length) {
+          const oldPos = previousPositions[i]
+          const t = transitionProgress
+
+          atomSpheres[i].position.x = oldPos.x + (targetX - oldPos.x) * t
+          atomSpheres[i].position.y = oldPos.y + (targetY - oldPos.y) * t
+          atomSpheres[i].position.z = oldPos.z + (targetZ - oldPos.z) * t
+        } else {
+          atomSpheres[i].position.x = targetX
+          atomSpheres[i].position.y = targetY
+          atomSpheres[i].position.z = targetZ
         }
       }
 
@@ -520,15 +542,25 @@
     let animateStarted = false
     let frameCounter = 0
     let lastFrameTime = 0
+    let transitionStartTime = 0
 
     function animate(timestamp) {
       if (!animateStarted) {
         console.log('Animation loop started, playing:', playing, 'frames:', frames.length)
         animateStarted = true
         lastFrameTime = timestamp
+        transitionStartTime = timestamp
       }
 
       if (playing && frames.length > 0) {
+        // Update trajectory transition progress
+        const transitionElapsed = timestamp - transitionStartTime
+        if (transitionElapsed < transitionDuration) {
+          transitionProgress = transitionElapsed / transitionDuration
+        } else {
+          transitionProgress = 1.0
+        }
+
         // Calculate interpolation alpha based on time within frame interval
         const elapsed = timestamp - lastFrameTime
 
@@ -625,6 +657,15 @@
         const oldFrameCount = frames.length
         currentBytes = size
         statusEl.textContent = 'LOADING NEW FRAMES...'
+
+        // Capture current atom positions before loading new trajectory
+        previousPositions = atomSpheres.map(sphere => ({
+          x: sphere.position.x,
+          y: sphere.position.y,
+          z: sphere.position.z
+        }))
+        transitionProgress = 0.0
+        transitionStartTime = performance.now()
 
         // Retry logic for partial DCD reads with exponential backoff
         let retries = 5
