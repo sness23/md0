@@ -134,14 +134,14 @@
   </div>
   <button id="play-pause">⏸ PAUSE</button>
   <div id="poll-interval">
-    POLL: <span id="poll-seconds">5</span>s
+    POLL: <span id="poll-seconds">60</span>s
     <br>
-    <input type="range" id="poll-slider" min="1" max="60" value="5" step="1">
+    <input type="range" id="poll-slider" min="1" max="60" value="60" step="1">
   </div>
   <div id="anim-speed">
     SPEED: <span id="anim-ms">500</span>ms
     <br>
-    <input type="range" id="anim-slider" min="10" max="5000" value="500" step="10">
+    <input type="range" id="anim-slider" min="10" max="1000" value="500" step="10">
   </div>
   <div id="crosshair"></div>
   <div id="atom-hud">
@@ -167,7 +167,7 @@
     let pollTimer = null
     let currentBytes = 0
     let playing = true
-    let pollIntervalSeconds = 5
+    let pollIntervalSeconds = 60
     let hudVisible = false
     let atomHudVisible = false
     let currentFrame = 0
