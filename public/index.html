@@ -471,6 +471,14 @@
         const material = new BABYLON.StandardMaterial(`mat${i}`, scene)
         material.diffuseColor = new BABYLON.Color3(...color)
         material.specularColor = new BABYLON.Color3(0.3, 0.3, 0.3)
+
+        // Make hydrogens translucent like glass
+        if (element === 'H') {
+          material.alpha = 0.6
+          material.specularColor = new BABYLON.Color3(0.8, 0.8, 0.8)
+          material.specularPower = 64  // Higher = glossier
+        }
+
         sphere.material = material
 
         sphere.position.x = atom.x
