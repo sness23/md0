@@ -1,105 +1,94 @@
-# 🧬✨ live md visualization but make it gay 🏳️‍⚧️💕
+# 🧬 Live Molecular Dynamics Visualization 🚀
 
-> *"i just think proteins are neat"* - me, probably high on estrogen while configuring this at 3am
+> *"i just think proteins are neat"*
 
-watch ur molecular dynamics simulations in real-time like ur watching a twitch stream but it's just atoms vibing 🎬✨
+watch your molecular dynamics simulations in real-time - like a livestream but it's just atoms vibing 🎬✨
 
-![License](https://img.shields.io/badge/license-MIT-pink.svg)
-![Python](https://img.shields.io/badge/python-3.9+-blueviolet.svg)
-![Node](https://img.shields.io/badge/node-18+-hotpink.svg)
-![Vibes](https://img.shields.io/badge/vibes-immaculate-ff69b4.svg)
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Python](https://img.shields.io/badge/python-3.9+-blue.svg)
+![Node](https://img.shields.io/badge/node-18+-green.svg)
 ![Arch](https://img.shields.io/badge/btw-i%20use%20arch-1793d1.svg)
 
-## 🌟 what even is this
+## 🌟 Overview
 
-okay so basically i wanted to watch proteins do their little dance moves in real-time without using some crusty visualization software from 2003. so i made this cursed abomination that streams OpenMM simulations straight to your browser because why tf not 🌐
+real-time visualization of MD simulations without crusty software from 2003. streams OpenMM simulations straight to your browser with Babylon.js rendering.
 
-it's like if PyMOL and Minecraft had a baby and that baby was raised by Babylon.js
+it's like if PyMOL and Minecraft had a baby 🎮
 
-**✨ features (that actually work sometimes):**
-- ⚡ real-time trajectory streaming (it's literally just polling a file but shhhh)
-- 🎨 CPK spheres that actually look kinda cute ngl
-- 🔄 auto-detects new frames (when it feels like it)
-- 🖱️ WASD controls because i'm a gamer girl and mouse look is non-negotiable
-- 📊 no external servers required (we're self-hosting our proteins like true linux users)
-- 🚀 no bloat, no systemd, just vibes
-- 💾 doesn't instantly crash ur browser (4000 frame buffer so you don't oom)
-- 🎮 literally minecraft controls. i can't believe this works
-- 🐱 probably works on a thinkpad (tested on my x230 running arch btw)
+**✨ Key Features:**
+- ⚡ real-time trajectory streaming (polls file for changes)
+- 🎨 CPK color-coded atomic spheres
+- 🔄 automatic frame detection and loading
+- 🖱️ WASD + mouse look controls (actual FPS controls!)
+- 📊 simple architecture, minimal dependencies
+- 🚀 no external visualization servers required
+- 💾 memory-optimized (4000 frame buffer limit)
+- 🎮 minecraft-style controls (pointer lock + WASD)
+- 🐱 tested on a thinkpad running arch btw
 
-## 🚀 speedrun setup (any% WR attempt)
+## 🚀 Quick Start
 
-### 📋 things you need (suffer)
+### 📋 Prerequisites
 
-- 🐍 **Python 3.9+** (i use mamba because conda is slow and i have adhd)
-- 📦 **Node.js 18+** (if you're on arch just `pacman -S nodejs` bestie)
-- ⚗️ **OpenMM** (for the actual science part or whatever)
-- 📊 **MDTraj** (to make sure we didn't fuck it up)
-- 🌐 **MDsrv** (serves files, not drama)
-- 🐱 **cats** (optional but recommended for debugging)
+- 🐍 **Python 3.9+** (mamba recommended because it's faster)
+- 📦 **Node.js 18+** (arch users: `pacman -S nodejs`)
+- ⚗️ **OpenMM** (via conda-forge)
+- 📊 **MDTraj** (for trajectory verification)
+- 🌐 **MDsrv** (file server)
 
-### 💻 installation (aka dependency hell)
+### 💻 Installation
 
 ```bash
-# 1. yoink the repo 📥
+# 1. Clone repository 📥
 git clone <your-repo-url>
 cd md
 
-# 2. python env moment 🐍
-# (using mamba bc im not a masochist)
+# 2. Create Python environment 🐍
 mamba create -n live-md -c conda-forge openmm mdtraj openmmtools -y
 conda activate live-md
 
-# 3. get mdsrv 🌐
+# 3. Install MDsrv 🌐
 pip install mdsrv
 
-# 4. node dependencies (bracing for impact) 📦
+# 4. Install Node dependencies 📦
 npm install
-# if this breaks just delete node_modules and try again
-# it's the classic IT solution: turn it off and on again
 
-# 5. config stuff ⚙️
+# 5. Configure environment (optional) ⚙️
 cp .env.example .env
-# edit this if you're fancy, otherwise defaults r fine
 ```
 
-### 🎬 actually running this thing
+### 🎬 Running
 
-you're gonna need like 3 terminal windows open. yes i know it's cursed. yes i use tmux. yes we exist.
+requires 3 terminal windows (tmux recommended)
 
-**Terminal A 🧪 - the science box:**
+**Terminal A 🧪 - OpenMM simulation:**
 ```bash
 conda activate live-md
 python python/openmm_run_pdb.py
-# this is where the protein goes brrrrr
-# if you have a nvidia gpu this will be way faster
-# if you're on a thinkpad like me, go make tea ☕
+# protein goes brrrrr
+# nvidia gpu = way faster, thinkpad cpu = go make tea ☕
 ```
 
-**Terminal B 🌐 - file server (she's serving):**
+**Terminal B 🌐 - MDsrv file server:**
 ```bash
 mdsrv --cfg scripts/app.cfg
-# literally just serves files
-# port 8080 gang
+# serves files on port 8080
 ```
 
-**Terminal C 💻 - the web thingy:**
+**Terminal C 💻 - Web server:**
 ```bash
 npm run dev
-# or `npm start` if you're feeling spicy
-# vite goes brrrr
+# or: npm start
 ```
 
-**🎮 open browser (firefox supremacy):**
-- go to http://127.0.0.1:5173 🌐
-- press **H** to toggle the HUD (it's hidden by default bc aesthetic)
-- press **Y** for atom inspector (raycasting is black magic)
-- **WASD** to move like you're playing CS:GO 🎮
-- **QE** for up/down (yes it's minecraft controls, cope)
-- click to enable **pointer lock** and look around with ur mouse 🖱️
-- **JIKL;** if you wanna be a vim elitist about camera controls 🕹️
-
-honestly the controls are unhinged but they work and i'm not changing them 💅
+**🎮 Browser controls:**
+- navigate to http://127.0.0.1:5173 🌐
+- press **H** to toggle HUD (hidden by default)
+- press **Y** to toggle atom inspector
+- **WASD** to move camera (FPS controls) 🎮
+- **QE** for up/down (minecraft style)
+- **click** to enable pointer lock + mouse look 🖱️
+- **JIKL;** for keyboard camera rotation 🕹️
 
 ## 🏗️ Architecture
 
@@ -320,50 +309,47 @@ Requires:
 5. 📂 **Single trajectory** - No support for switching between trajectories
 6. 🌊 **Trajectory transition smoothing** - 1-second blend when new frames load
 
-## 🔧 when shit breaks (a troubleshooting guide)
+## 🔧 Troubleshooting
 
-### 🚫 simulation won't start (skill issue)
+### 🚫 Simulation won't start
 
 ```bash
-# check if openmm is even installed lmao 🔍
+# Check OpenMM installation 🔍
 python -c "import openmm; print(openmm.version.version)"
 
-# maybe you forgot openmmtools? 📦
+# Install openmmtools if missing 📦
 pip install openmmtools
 
-# check if ur gpu works (or if you're cpu gang) 🎮
+# Check GPU availability 🎮
 python python/check_openmm_gpu.py
-# spoiler: my thinkpad doesn't have a gpu and i'm suffering
 ```
 
-### 📭 no frames appearing (the void stares back)
+### 📭 No frames appearing
 
 ```bash
-# is the dcd file like... existing? 📂
+# Check if DCD file exists 📂
 ls -lh data/traj.dcd
-# if this returns nothing, the simulation isn't running bestie
 
-# verify you didn't fuck it up ✅
+# Verify trajectory ✅
 python verify_traj.py
 
-# is mdsrv actually running or did you forget 🌐
+# Check MDsrv is running 🌐
 curl -I http://127.0.0.1:8080/data/traj.dcd
-# if this 404s, you forgot terminal B
 ```
 
-### 🖥️ viewer is a blank void (my gender)
+### 🖥️ Viewer shows blank screen
 
-- 🔍 F12 and check console (become the bug)
-- 📂 can you even access the files? http://127.0.0.1:8080/data/topology.pdb
-- 🌐 check CORS isn't being a little bitch (network tab)
-- ⚙️ `/api/config` should return json not a 404
+- 🔍 Open console (F12) and check for errors
+- 📂 Verify files are accessible: http://127.0.0.1:8080/data/topology.pdb
+- 🌐 Check CORS headers in Network tab
+- ⚙️ Verify `/api/config` returns correct JSON
 
-### ⏸️ animation machine broke
+### ⏸️ Animation not playing
 
-- 🎮 press **H** to show HUD, click the pause button (it might already be paused)
-- 🐛 check console, maybe the DCD parser is having a moment
-- ✅ run `python verify_traj.py` to make sure frames are actually different
-- if it's still broken, idk, restart everything. classic tech support moment
+- 🎮 Press **H** to show HUD, check pause button state
+- 🐛 Check console for DCD parser errors
+- ✅ Run `python verify_traj.py` to verify frames differ
+- if still broken, restart everything (classic IT solution)
 
 ## 🛠️ Development
 
@@ -405,28 +391,23 @@ curl -I http://127.0.0.1:8080/data/traj.dcd
 - 📄 [CHARMM DCD Specification](https://www.ks.uiuc.edu/Research/vmd/plugins/molfile/dcdplugin.html)
 - 🌐 [MDsrv Documentation](https://github.com/arose/mdsrv)
 
-## 📜 license (boring legal stuff)
+## 📜 License
 
-MIT License - basically do whatever you want, just don't sue me 🎉
+MIT License - see LICENSE file for details 🎉
 
-if you use this for your PhD thesis and it breaks, that's on you bestie
+## 🙏 Acknowledgments
 
-## 🙏 acknowledgments (who to blame)
-
-- 🧪 built with [OpenMM](https://openmm.org/) (they're doing god's work)
-- 🎨 visualization via [Babylon.js](https://www.babylonjs.com/) (webgl goes brrr)
-- 🧬 test protein from PDB (1erm beta-lactamase my beloved)
-- 🌐 [MDsrv](https://github.com/arose/mdsrv) for file serving (she's serving looks)
-- 💡 inspired by PyMOL and ChimeraX (but like, in a browser and gayer)
-- ☕ coded at 3am fueled by spite and poor life choices
-- 🐱 emotional support provided by my cat (she stepped on the keyboard twice)
-- 🏳️‍⚧️ trans rights are human rights
-- 🐧 arch linux btw (i use arch btw, did i mention i use arch?)
+- 🧪 Built with [OpenMM](https://openmm.org/)
+- 🎨 Visualization powered by [Babylon.js](https://www.babylonjs.com/)
+- 🧬 Test protein from PDB (1erm beta-lactamase)
+- 🌐 File serving via [MDsrv](https://github.com/arose/mdsrv)
+- 💡 Inspired by PyMOL and ChimeraX (but in a browser with FPS controls)
+- ☕ Coded at 3am (as all good projects are)
+- 🐱 Emotional support provided by cats
+- 🐧 arch linux btw
 
 ---
 
-*made with 💕 by a caffeinated transfemme who thought "what if proteins but with minecraft controls"*
+*made with 💕 and way too much caffeine*
 
-*if you found this useful or cursed (or both), consider starring ⭐*
-
-*now go simulate some proteins you beautiful disaster 🧬✨*
+*if you found this useful (or cursed), consider starring ⭐*
