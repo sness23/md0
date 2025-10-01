@@ -8,13 +8,13 @@ from sys import stdout
 # Parse command line arguments
 parser = argparse.ArgumentParser(description='Run OpenMM MD simulation from PDB/CIF file')
 parser.add_argument('--input', type=str, required=True, help='Input structure file (PDB or CIF)')
-parser.add_argument('--timestep', type=float, default=2.0, help='Integration timestep in femtoseconds (default: 2.0)')
+parser.add_argument('--timestep', type=float, default=4.0, help='Integration timestep in femtoseconds (default: 4.0)')
 parser.add_argument('--temperature', type=float, default=300.0, help='Temperature in Kelvin (default: 300.0)')
 parser.add_argument('--friction', type=float, default=1.0, help='Friction coefficient in 1/ps (default: 1.0)')
-parser.add_argument('--steps-per-batch', type=int, default=5000, help='MD steps per batch (default: 5000)')
-parser.add_argument('--report-interval', type=int, default=100, help='DCD frame output interval in steps (default: 100)')
-parser.add_argument('--log-interval', type=int, default=1000, help='Console log interval in steps (default: 1000)')
-parser.add_argument('--batch-sleep', type=float, default=0.2, help='Sleep time between batches in seconds (default: 0.2)')
+parser.add_argument('--steps-per-batch', type=int, default=10000, help='MD steps per batch (default: 10000)')
+parser.add_argument('--report-interval', type=int, default=500, help='DCD frame output interval in steps (default: 500)')
+parser.add_argument('--log-interval', type=int, default=5000, help='Console log interval in steps (default: 5000)')
+parser.add_argument('--batch-sleep', type=float, default=0.0, help='Sleep time between batches in seconds (default: 0.0)')
 parser.add_argument('--platform', type=str, default='auto', help='OpenMM platform: auto, CPU, OpenCL, Metal, CUDA (default: auto)')
 parser.add_argument('--solvent', type=str, default='implicit', choices=['implicit', 'explicit'], help='Solvent model (default: implicit)')
 args = parser.parse_args()
@@ -197,46 +197,23 @@ selected_platform, platform_props = select_platform(args.platform)
 # Create simulation
 simulation = app.Simulation(topology, system, integrator, selected_platform, platform_props)
 
-# Check if we should resume from existing trajectory
-resume_from_trajectory = os.path.exists(TRAJ_PATH) and os.path.exists(TOPOLOGY_PATH)
+# Start new trajectory (append mode if files exist)
+append_mode = os.path.exists(TRAJ_PATH)
 
-if resume_from_trajectory:
-    print(f'[openmm_run_pdb] Found existing trajectory, resuming...', file=sys.stderr)
-    try:
-        import mdtraj as md
-        traj = md.load(TRAJ_PATH, top=TOPOLOGY_PATH)
-        last_frame = traj[-1]
-        # MDTraj uses nm, OpenMM uses nm for positions (unit.nanometer)
-        last_positions = last_frame.xyz[0] * unit.nanometer
-        simulation.context.setPositions(last_positions)
+print(f'[openmm_run_pdb] {"Appending to" if append_mode else "Starting new"} trajectory...', file=sys.stderr)
+simulation.context.setPositions(positions)
 
-        # Also restore velocities if available, or re-initialize them
-        try:
-            simulation.context.setVelocitiesToTemperature(temperature)
-            print(f'[openmm_run_pdb] Re-initialized velocities at {args.temperature} K', file=sys.stderr)
-        except:
-            pass
-
-        print(f'[openmm_run_pdb] Loaded last frame from trajectory ({len(traj)} existing frames)', file=sys.stderr)
-    except Exception as e:
-        print(f'[openmm_run_pdb] Failed to load trajectory, starting fresh: {e}', file=sys.stderr)
-        simulation.context.setPositions(positions)
-        simulation.minimizeEnergy()
-        resume_from_trajectory = False
-else:
-    print(f'[openmm_run_pdb] Starting new trajectory...', file=sys.stderr)
-    simulation.context.setPositions(positions)
-    # Minimize energy
+if not append_mode:
+    # Minimize energy only for new trajectories
     print(f'[openmm_run_pdb] Minimizing energy...', file=sys.stderr)
     simulation.minimizeEnergy()
 
-# Write initial topology (or keep existing)
-if not resume_from_trajectory:
+    # Write initial topology
     with open(TOPOLOGY_PATH, 'w') as f:
         app.PDBFile.writeFile(simulation.topology, simulation.context.getState(getPositions=True).getPositions(), f)
 
-# Add reporters (append mode if resuming)
-simulation.reporters.append(app.DCDReporter(TRAJ_PATH, args.report_interval, append=resume_from_trajectory))
+# Add reporters
+simulation.reporters.append(app.DCDReporter(TRAJ_PATH, args.report_interval, append=append_mode))
 simulation.reporters.append(app.StateDataReporter(stdout, args.log_interval, step=True, potentialEnergy=True, temperature=True, speed=True, separator=','))
 
 print(f'[openmm_run_pdb] Configuration:', file=sys.stderr)
@@ -256,6 +233,7 @@ print(f'[openmm_run_pdb] Running simulation... Press Ctrl+C to stop', file=sys.s
 try:
     while True:
         simulation.step(args.steps_per_batch)
-        time.sleep(args.batch_sleep)
+        if args.batch_sleep > 0:
+            time.sleep(args.batch_sleep)
 except KeyboardInterrupt:
     print(f'\n[openmm_run_pdb] Simulation stopped by user', file=sys.stderr)
