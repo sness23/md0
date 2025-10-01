@@ -139,9 +139,9 @@
     <input type="range" id="poll-slider" min="1" max="60" value="5" step="1">
   </div>
   <div id="anim-speed">
-    SPEED: <span id="anim-ms">50</span>ms
+    SPEED: <span id="anim-ms">500</span>ms
     <br>
-    <input type="range" id="anim-slider" min="10" max="500" value="50" step="10">
+    <input type="range" id="anim-slider" min="10" max="5000" value="500" step="10">
   </div>
   <div id="crosshair"></div>
   <div id="atom-hud">
@@ -174,7 +174,7 @@
     let frames = []
     let atoms = []
     let atomSpheres = []
-    let frameInterval = 50 // ms between animation frames
+    let frameInterval = 500 // ms between animation frames
 
     // CPK colors (RGB 0-1)
     const CPK_COLORS = {
@@ -483,8 +483,8 @@
       atomCountEl.textContent = atoms.length
     }
 
-    // Update atom positions for current frame
-    function updateFrame() {
+    // Update atom positions for current frame with optional interpolation
+    function updateFrame(alpha = 1.0) {
       if (frames.length === 0) {
         console.log('updateFrame: no frames')
         return
@@ -496,10 +496,21 @@
         return
       }
 
+      // Get next frame for interpolation
+      const nextFrame = frames[(currentFrame + 1) % frames.length]
+
       for (let i = 0; i < atomSpheres.length && i < frame.x.length; i++) {
-        atomSpheres[i].position.x = frame.x[i]
-        atomSpheres[i].position.y = frame.y[i]
-        atomSpheres[i].position.z = frame.z[i]
+        if (alpha < 1.0 && nextFrame) {
+          // Linear interpolation between current and next frame
+          atomSpheres[i].position.x = frame.x[i] + (nextFrame.x[i] - frame.x[i]) * alpha
+          atomSpheres[i].position.y = frame.y[i] + (nextFrame.y[i] - frame.y[i]) * alpha
+          atomSpheres[i].position.z = frame.z[i] + (nextFrame.z[i] - frame.z[i]) * alpha
+        } else {
+          // No interpolation, use exact frame
+          atomSpheres[i].position.x = frame.x[i]
+          atomSpheres[i].position.y = frame.y[i]
+          atomSpheres[i].position.z = frame.z[i]
+        }
       }
 
       frameInfoEl.textContent = `${currentFrame + 1}/${frames.length}`
@@ -517,17 +528,25 @@
         lastFrameTime = timestamp
       }
 
-      // Update based on user-controlled frame interval
-      if (timestamp - lastFrameTime >= frameInterval) {
-        if (playing && frames.length > 0) {
+      if (playing && frames.length > 0) {
+        // Calculate interpolation alpha based on time within frame interval
+        const elapsed = timestamp - lastFrameTime
+
+        // Advance to next frame when interval complete
+        if (elapsed >= frameInterval) {
           currentFrame = (currentFrame + 1) % frames.length
-          updateFrame()
+          lastFrameTime += frameInterval  // Keep remainder for smooth timing
           frameCounter++
           if (frameCounter % 100 === 0) {
             console.log('Animation frame:', currentFrame, 'counter:', frameCounter)
           }
         }
-        lastFrameTime = timestamp
+
+        // Calculate alpha after potential frame advance
+        const alpha = Math.min((timestamp - lastFrameTime) / frameInterval, 1.0)
+
+        // Update with interpolation
+        updateFrame(alpha)
       }
 
       requestAnimationFrame(animate)
