@@ -111,6 +111,7 @@
     let playing = true
     const pollIntervalSeconds = 5
     let hudVisible = false
+    let atomHudVisible = false
     let currentFrame = 0
     let frames = []
     let atoms = []
@@ -194,7 +195,12 @@
         hudVisible = !hudVisible
         hudEl.style.display = hudVisible ? 'block' : 'none'
         playPauseBtn.style.display = hudVisible ? 'block' : 'none'
-        atomHudEl.style.display = hudVisible ? 'block' : 'none'
+      }
+
+      // Toggle atom HUD with 'y' key
+      if (key === 'y') {
+        atomHudVisible = !atomHudVisible
+        atomHudEl.style.display = atomHudVisible ? 'block' : 'none'
       }
     })
     window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false)
@@ -212,7 +218,7 @@
       if (keys['l']) camera.rotation.x -= lookSpeed  // Look up (alternative)
 
       // Raycast from camera center to detect atom at crosshair
-      if (hudVisible && atomSpheres.length > 0) {
+      if (atomHudVisible && atomSpheres.length > 0) {
         const ray = camera.getForwardRay(1000)
         const hit = scene.pickWithRay(ray)
 
@@ -541,18 +547,30 @@
         currentBytes = size
         statusEl.textContent = 'LOADING NEW FRAMES...'
 
-        // Retry logic for partial DCD reads
-        let retries = 3
+        // Retry logic for partial DCD reads with exponential backoff
+        let retries = 5
         let newFrames = []
+        let backoffMs = 200
         while (retries > 0) {
           try {
             const dcdRes = await fetch(dcdUrl + '?t=' + Date.now())
+            if (!dcdRes.ok) {
+              throw new Error(`HTTP ${dcdRes.status}`)
+            }
             const dcdBuffer = await dcdRes.arrayBuffer()
+
+            // Verify we got the expected size
+            const contentLength = parseInt(dcdRes.headers.get('content-length') || '0')
+            if (contentLength > 0 && dcdBuffer.byteLength !== contentLength) {
+              throw new Error(`Content-length mismatch: got ${dcdBuffer.byteLength}, expected ${contentLength}`)
+            }
+
             newFrames = parseDCD(dcdBuffer)
             if (newFrames.length > 0) break
           } catch (err) {
-            console.warn('DCD parse error, retrying...', err)
-            await new Promise(r => setTimeout(r, 500)) // Wait 500ms before retry
+            console.warn(`DCD fetch/parse error (${retries} retries left), waiting ${backoffMs}ms:`, err.message || err)
+            await new Promise(r => setTimeout(r, backoffMs))
+            backoffMs *= 2 // Exponential backoff
           }
           retries--
         }
