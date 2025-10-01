@@ -24,7 +24,7 @@
     #hud-line { color: #0f0; }
     #play-pause {
       position: fixed;
-      bottom: 30px;
+      bottom: 80px;
       right: 30px;
       background: rgba(0, 0, 0, 0.8);
       color: #0f0;
@@ -37,6 +37,27 @@
       font-weight: bold;
       box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
       display: none;
+    }
+    #poll-interval {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      background: rgba(0, 0, 0, 0.8);
+      color: #0f0;
+      border: 2px solid rgba(0, 255, 0, 0.5);
+      padding: 12px 20px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+      display: none;
+      pointer-events: auto;
+    }
+    #poll-slider {
+      width: 150px;
+      margin-top: 8px;
+      cursor: pointer;
+      accent-color: #0f0;
     }
     #play-pause:hover { background: rgba(0, 50, 0, 0.9); }
     #crosshair {
@@ -91,6 +112,11 @@
     <div id="hud-line">ATOMS: <span id="atom-count">0</span></div>
   </div>
   <button id="play-pause">⏸ PAUSE</button>
+  <div id="poll-interval">
+    POLL: <span id="poll-seconds">5</span>s
+    <br>
+    <input type="range" id="poll-slider" min="1" max="60" value="5" step="1">
+  </div>
   <div id="crosshair"></div>
   <div id="atom-hud">
     <div>ATOM: <span id="atom-element">-</span></div>
@@ -101,6 +127,9 @@
     const frameInfoEl = document.getElementById('frame-info')
     const atomCountEl = document.getElementById('atom-count')
     const playPauseBtn = document.getElementById('play-pause')
+    const pollIntervalEl = document.getElementById('poll-interval')
+    const pollSecondsEl = document.getElementById('poll-seconds')
+    const pollSliderEl = document.getElementById('poll-slider')
     const hudEl = document.getElementById('hud')
     const atomHudEl = document.getElementById('atom-hud')
     const atomElementEl = document.getElementById('atom-element')
@@ -109,7 +138,7 @@
     let pollTimer = null
     let currentBytes = 0
     let playing = true
-    const pollIntervalSeconds = 5
+    let pollIntervalSeconds = 5
     let hudVisible = false
     let atomHudVisible = false
     let currentFrame = 0
@@ -195,6 +224,7 @@
         hudVisible = !hudVisible
         hudEl.style.display = hudVisible ? 'block' : 'none'
         playPauseBtn.style.display = hudVisible ? 'block' : 'none'
+        pollIntervalEl.style.display = hudVisible ? 'block' : 'none'
       }
 
       // Toggle atom HUD with 'y' key
@@ -593,6 +623,17 @@
     playPauseBtn.onclick = () => {
       playing = !playing
       playPauseBtn.textContent = playing ? '⏸ PAUSE' : '▶ PLAY'
+    }
+
+    pollSliderEl.oninput = () => {
+      pollIntervalSeconds = parseInt(pollSliderEl.value)
+      pollSecondsEl.textContent = pollIntervalSeconds
+
+      // Restart polling timer with new interval
+      if (pollTimer) {
+        clearInterval(pollTimer)
+        pollTimer = setInterval(checkForNewFrames, pollIntervalSeconds * 1000)
+      }
     }
 
     loadAll().catch(err => {
