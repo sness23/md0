@@ -176,6 +176,14 @@
     let atomSpheres = []
     let frameInterval = 500 // ms between animation frames
 
+    // Memory management - only keep last N frames to prevent OOM
+    // Target ~2GB usage (half of Chrome's default 4GB heap limit)
+    // With Float32Array: ~22 atoms * 3 coords * 4 bytes * MAX_FRAMES
+    // For 22 atoms: ~264 bytes/frame, so ~7.5M frames = 2GB (way more than needed)
+    // Practical limit considering other overhead: 4000 frames ≈ 1MB
+    const MAX_FRAMES = 4000 // Approximately 1-2MB for small molecules
+    let totalFramesEverSeen = 0 // Track total for UI display
+
     // Trajectory smoothing state
     let previousPositions = null // Store old atom positions before trajectory update
     let transitionProgress = 1.0 // 0.0 = fully old positions, 1.0 = fully new positions
@@ -191,9 +199,9 @@
       'P': [1.0, 0.5, 0.0],    // orange
     }
 
-    // CPK radii in angstroms
+    // CPK radii in angstroms (scaled up for better visibility)
     const CPK_RADII = {
-      'H': 0.25, 'C': 0.7, 'N': 0.65, 'O': 0.6, 'S': 1.0, 'P': 1.0
+      'H': 0.5, 'C': 1.3, 'N': 1.2, 'O': 1.1, 'S': 1.7, 'P': 1.7
     }
 
     // Babylon.js setup
@@ -322,7 +330,7 @@
       return parsedAtoms
     }
 
-    // Parse DCD binary file
+    // Parse DCD binary file - uses Float32Array for memory efficiency
     function parseDCD(arrayBuffer) {
       try {
         const view = new DataView(arrayBuffer)
@@ -389,13 +397,18 @@
             const cellBlockEnd = view.getInt32(offset, true); offset += 4
           }
 
-          const coords = { x: [], y: [], z: [] }
+          // Use Float32Array for memory efficiency (50% smaller than regular arrays)
+          const coords = {
+            x: new Float32Array(nAtoms),
+            y: new Float32Array(nAtoms),
+            z: new Float32Array(nAtoms)
+          }
 
           // X coordinates
           const xBlockSize = view.getInt32(offset, true); offset += 4
           if (f === 0) console.log('Frame 0 X block size:', xBlockSize, 'expected:', nAtoms * 4)
           for (let i = 0; i < nAtoms; i++) {
-            coords.x.push(view.getFloat32(offset, true))
+            coords.x[i] = view.getFloat32(offset, true)
             offset += 4
           }
           const xBlockEnd = view.getInt32(offset, true); offset += 4
@@ -406,7 +419,7 @@
           // Y coordinates
           const yBlockSize = view.getInt32(offset, true); offset += 4
           for (let i = 0; i < nAtoms; i++) {
-            coords.y.push(view.getFloat32(offset, true))
+            coords.y[i] = view.getFloat32(offset, true)
             offset += 4
           }
           const yBlockEnd = view.getInt32(offset, true); offset += 4
@@ -414,7 +427,7 @@
           // Z coordinates
           const zBlockSize = view.getInt32(offset, true); offset += 4
           for (let i = 0; i < nAtoms; i++) {
-            coords.z.push(view.getFloat32(offset, true))
+            coords.z[i] = view.getFloat32(offset, true)
             offset += 4
           }
           const zBlockEnd = view.getInt32(offset, true); offset += 4
@@ -567,7 +580,9 @@
         }
       }
 
-      frameInfoEl.textContent = `${currentFrame + 1}/${frames.length}`
+      // Show total frames seen, not just buffer size
+      const displayTotal = Math.max(totalFramesEverSeen, frames.length)
+      frameInfoEl.textContent = `${currentFrame + 1}/${frames.length} (${displayTotal} total)`
     }
 
     // Animation loop
@@ -649,6 +664,13 @@
       console.log('DCD buffer size:', dcdBuffer.byteLength)
       frames = parseDCD(dcdBuffer)
       console.log('Loaded frames:', frames.length)
+      totalFramesEverSeen = frames.length
+
+      // Apply frame limit to prevent memory issues
+      if (frames.length > MAX_FRAMES) {
+        console.log(`Limiting to last ${MAX_FRAMES} frames (out of ${frames.length})`)
+        frames = frames.slice(-MAX_FRAMES)
+      }
 
       // Validate frame data matches atom count
       if (frames.length > 0 && frames[0].x.length !== atoms.length) {
@@ -728,8 +750,17 @@
         }
 
         if (newFrames.length > 0) {
-          frames = newFrames
-          const newFrameCount = frames.length - oldFrameCount
+          totalFramesEverSeen = newFrames.length
+          const newFrameCount = newFrames.length - oldFrameCount
+
+          // Apply frame limit to prevent memory issues
+          if (newFrames.length > MAX_FRAMES) {
+            console.log(`Limiting to last ${MAX_FRAMES} frames (out of ${newFrames.length})`)
+            frames = newFrames.slice(-MAX_FRAMES)
+          } else {
+            frames = newFrames
+          }
+
           if (newFrameCount > 0) {
             statusEl.textContent = `+${newFrameCount} FRAMES`
             setTimeout(() => statusEl.textContent = 'READY', 2000)
