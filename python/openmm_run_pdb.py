@@ -235,29 +235,8 @@ if not resume_from_trajectory:
     with open(TOPOLOGY_PATH, 'w') as f:
         app.PDBFile.writeFile(simulation.topology, simulation.context.getState(getPositions=True).getPositions(), f)
 
-# Use atomic write wrapper for DCD to prevent partial reads
-class AtomicDCDReporter(app.DCDReporter):
-    """DCD reporter that writes to temp file and atomically renames."""
-    def __init__(self, file, reportInterval, append=False, enforcePeriodicBox=None):
-        self._temp_file = file + '.tmp'
-        self._final_file = file
-        # If appending, copy existing file to temp first
-        if append and os.path.exists(file):
-            import shutil
-            shutil.copy2(file, self._temp_file)
-        super().__init__(self._temp_file, reportInterval, append, enforcePeriodicBox)
-
-    def report(self, simulation, state):
-        super().report(simulation, state)
-        # Flush and atomically rename after each frame
-        self._out.flush()
-        os.fsync(self._out.fileno())
-        # Copy temp to final (atomic on most filesystems)
-        import shutil
-        shutil.copy2(self._temp_file, self._final_file)
-
 # Add reporters (append mode if resuming)
-simulation.reporters.append(AtomicDCDReporter(TRAJ_PATH, args.report_interval, append=resume_from_trajectory))
+simulation.reporters.append(app.DCDReporter(TRAJ_PATH, args.report_interval, append=resume_from_trajectory))
 simulation.reporters.append(app.StateDataReporter(stdout, args.log_interval, step=True, potentialEnergy=True, temperature=True, speed=True, separator=','))
 
 print(f'[openmm_run_pdb] Configuration:', file=sys.stderr)
