@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a live molecular dynamics (MD) visualization demo that streams running MD simulations to a web browser in near-real-time. The architecture consists of three independent components that work together:
 
-1. **OpenMM Producer** (`python/openmm_run.py`) - Continuously runs an MD simulation and appends frames to `data/traj.dcd`
+1. **OpenMM Producer** (`python/openmm_run_pdb.py`) - Continuously runs an MD simulation and appends frames to `data/traj.dcd`
 2. **MDsrv** - Serves the `data/` directory files over HTTP at port 8080
 3. **Node/Express Web Server** (`server.js`) - Serves the Mol* viewer frontend and provides configuration via `/api/config`
 
@@ -42,7 +42,7 @@ The system requires three processes running simultaneously:
 **Terminal A - OpenMM simulation:**
 ```bash
 conda activate live-md
-python python/openmm_run.py
+python python/openmm_run_pdb.py
 ```
 
 **Terminal B - MDsrv file server:**
@@ -69,14 +69,14 @@ Then open http://127.0.0.1:5173 in a browser and click "Start Polling" to watch 
 ### Configuration
 - `.env` - Controls ports and URLs (see `.env.example`)
 - `scripts/app.cfg` - MDsrv configuration (host, port, data directories)
-- OpenMM simulation parameters are hardcoded in `python/openmm_run.py`
+- OpenMM simulation parameters are hardcoded in `python/openmm_run_pdb.py`
 
 ### Key Implementation Notes
 - The demo uses simple file growth detection (HEAD request for Content-Length) rather than true streaming
 - DCD trajectory file is continuously appended by OpenMM's DCDReporter
 - Frontend reloads entire trajectory when growth is detected (naive but simple approach)
 - For production use, consider MDsrv's REST endpoints or WebSocket streaming for frame-accurate updates
-- Current simulation is alanine dipeptide in implicit solvent (CPU-based)
+- Current simulation is beta-lactamase (1erm) in implicit solvent (CPU-based)
 
 ## File Structure
 ```
@@ -86,7 +86,7 @@ data/                    # Output directory (created at runtime)
 public/
   index.html             # Mol* viewer + polling logic
 python/
-  openmm_run.py          # MD simulation runner
+  openmm_run_pdb.py      # MD simulation runner
 scripts/
   app.cfg                # MDsrv configuration
 server.js                # Express server
