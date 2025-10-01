@@ -488,6 +488,22 @@
       atomCountEl.textContent = atoms.length
     }
 
+    // Catmull-Rom spline interpolation
+    // Given 4 control points p0, p1, p2, p3 and parameter t (0 to 1),
+    // returns interpolated value between p1 and p2
+    function catmullRom(p0, p1, p2, p3, t) {
+      const t2 = t * t
+      const t3 = t2 * t
+
+      // Catmull-Rom basis matrix calculation
+      return 0.5 * (
+        (2 * p1) +
+        (-p0 + p2) * t +
+        (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 +
+        (-p0 + 3 * p1 - 3 * p2 + p3) * t3
+      )
+    }
+
     // Update atom positions for current frame with optional interpolation
     function updateFrame(alpha = 1.0) {
       if (frames.length === 0) {
@@ -501,15 +517,31 @@
         return
       }
 
-      // Get next frame for interpolation
-      const nextFrame = frames[(currentFrame + 1) % frames.length]
-
       for (let i = 0; i < atomSpheres.length && i < frame.x.length; i++) {
         // First, calculate target position (with frame-to-frame interpolation)
         let targetX, targetY, targetZ
 
-        if (alpha < 1.0 && nextFrame) {
-          // Linear interpolation between current and next frame
+        // Use Catmull-Rom spline if we have at least 4 frames
+        if (alpha < 1.0 && frames.length >= 4) {
+          // Get 4 control points for Catmull-Rom spline
+          const idx = currentFrame
+          const p0Idx = (idx - 1 + frames.length) % frames.length  // previous frame
+          const p1Idx = idx                                         // current frame
+          const p2Idx = (idx + 1) % frames.length                   // next frame
+          const p3Idx = (idx + 2) % frames.length                   // next+1 frame
+
+          const p0 = frames[p0Idx]
+          const p1 = frames[p1Idx]
+          const p2 = frames[p2Idx]
+          const p3 = frames[p3Idx]
+
+          // Catmull-Rom interpolation for each coordinate
+          targetX = catmullRom(p0.x[i], p1.x[i], p2.x[i], p3.x[i], alpha)
+          targetY = catmullRom(p0.y[i], p1.y[i], p2.y[i], p3.y[i], alpha)
+          targetZ = catmullRom(p0.z[i], p1.z[i], p2.z[i], p3.z[i], alpha)
+        } else if (alpha < 1.0 && frames.length >= 2) {
+          // Fall back to linear interpolation if we don't have enough frames
+          const nextFrame = frames[(currentFrame + 1) % frames.length]
           targetX = frame.x[i] + (nextFrame.x[i] - frame.x[i]) * alpha
           targetY = frame.y[i] + (nextFrame.y[i] - frame.y[i]) * alpha
           targetZ = frame.z[i] + (nextFrame.z[i] - frame.z[i]) * alpha
