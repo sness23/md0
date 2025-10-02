@@ -10,7 +10,6 @@ const __dirname = path.dirname(__filename)
 
 const app = express()
 const PORT = process.env.PORT || 5173
-const MDSRV_URL = process.env.MDSRV_URL || 'http://127.0.0.1:8080'
 const DATA_DIR = process.env.DATA_DIR || './data'
 
 // CORS headers for all requests
@@ -39,5 +38,5 @@ app.get('/api/config', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`[live-md-demo] Web server listening at http://127.0.0.1:${PORT}`)
-  console.log(`[live-md-demo] Expect MDsrv at ${MDSRV_URL}`)
+  console.log(`[live-md-demo] Serving data files from ${DATA_DIR}`)
 })

@@ -34,7 +34,6 @@ it's like if PyMOL and Minecraft had a baby 🎮
 - 📦 **Node.js 18+** (arch users: `pacman -S nodejs`)
 - ⚗️ **OpenMM** (via conda-forge)
 - 📊 **MDTraj** (for trajectory verification)
-- 🌐 **MDsrv** (file server)
 
 ### 💻 Installation
 
@@ -47,19 +46,16 @@ cd md
 mamba create -n live-md -c conda-forge openmm mdtraj openmmtools -y
 conda activate live-md
 
-# 3. Install MDsrv 🌐
-pip install mdsrv
-
-# 4. Install Node dependencies 📦
+# 3. Install Node dependencies 📦
 npm install
 
-# 5. Configure environment (optional) ⚙️
+# 4. Configure environment (optional) ⚙️
 cp .env.example .env
 ```
 
 ### 🎬 Running
 
-requires 3 terminal windows (tmux recommended)
+requires 2 terminal windows (tmux recommended)
 
 **Terminal A 🧪 - OpenMM simulation:**
 ```bash
@@ -69,16 +65,11 @@ python python/openmm_run_pdb.py
 # nvidia gpu = way faster, thinkpad cpu = go make tea ☕
 ```
 
-**Terminal B 🌐 - MDsrv file server:**
-```bash
-mdsrv --cfg scripts/app.cfg
-# serves files on port 8080
-```
-
-**Terminal C 💻 - Web server:**
+**Terminal B 💻 - Web server:**
 ```bash
 npm run dev
 # or: npm start
+# serves both the viewer AND data files (no mdsrv needed!)
 ```
 
 **🎮 Browser controls:**
@@ -108,18 +99,12 @@ npm run dev
 │  traj.dcd       │  🎞️ Trajectory
 └────────┬────────┘
          │
-         │ served via HTTP 🌐
+         │ served via Express 🌐
          ↓
 ┌─────────────────┐
-│  🌐 MDsrv      │  File server
-│  (port 8080)    │  → /data/* (with CORS) 🔓
-└────────┬────────┘
-         │
-         │ proxied via Express
-         ↓
-┌─────────────────┐
-│ 💻 Express      │  Serves frontend + config
-│   Server        │  → /api/config (metadata) ⚙️
+│ 💻 Express      │  Serves everything!
+│   Server        │  → /data/* (static files) 📂
+│ (port 5173)     │  → /api/config (metadata) ⚙️
 └────────┬────────┘  → / (viewer) 🎨
          │
          │ HTTP 🌐
@@ -134,11 +119,10 @@ npm run dev
 
 1. 🧪 **OpenMM** runs molecular dynamics simulation
 2. 💾 **DCDReporter** appends frames to `data/traj.dcd` every 100 steps
-3. 🌐 **MDsrv** serves files from `./data` directory at port 8080
-4. 💻 **Express server** serves frontend and provides MDsrv URL via `/api/config`
-5. 🔍 **Frontend** polls trajectory file size via HEAD requests
-6. 📥 When file grows, frontend fetches and parses new DCD data
-7. 🎨 **Babylon.js** updates atom positions and renders frames smoothly
+3. 💻 **Express server** serves frontend, data files, and config via `/api/config`
+4. 🔍 **Frontend** polls trajectory file size via HEAD requests
+5. 📥 When file grows, frontend fetches and parses new DCD data
+6. 🎨 **Babylon.js** updates atom positions and renders frames smoothly
 
 ### 📄 File Formats
 
@@ -178,7 +162,6 @@ Create `.env` file (or use defaults):
 # Server configuration 💻
 PORT=5173                           # Web server port
 DATA_DIR=./data                     # Output directory
-MDSRV_URL=http://127.0.0.1:8080    # MDsrv file server
 ```
 
 ### 🧪 OpenMM Parameters
@@ -333,14 +316,14 @@ ls -lh data/traj.dcd
 # Verify trajectory ✅
 python verify_traj.py
 
-# Check MDsrv is running 🌐
-curl -I http://127.0.0.1:8080/data/traj.dcd
+# Check web server is serving files 🌐
+curl -I http://127.0.0.1:5173/data/traj.dcd
 ```
 
 ### 🖥️ Viewer shows blank screen
 
 - 🔍 Open console (F12) and check for errors
-- 📂 Verify files are accessible: http://127.0.0.1:8080/data/topology.pdb
+- 📂 Verify files are accessible: http://127.0.0.1:5173/data/topology.pdb
 - 🌐 Check CORS headers in Network tab
 - ⚙️ Verify `/api/config` returns correct JSON
 
@@ -368,7 +351,7 @@ curl -I http://127.0.0.1:8080/data/traj.dcd
 **🌐 Server-side processing:**
 - Add routes in `server.js`
 - Create API endpoints for frame data
-- Current: Simple Express + MDsrv proxy architecture
+- Current: Simple Express server serving everything
 
 ### 🧪 Testing
 
@@ -378,10 +361,8 @@ python verify_traj.py
 
 # Test web server 💻
 curl http://127.0.0.1:5173/api/config
-curl -I http://127.0.0.1:8080/data/topology.pdb
-
-# Test MDsrv 🌐
-curl -I http://127.0.0.1:8080/data/traj.dcd
+curl -I http://127.0.0.1:5173/data/topology.pdb
+curl -I http://127.0.0.1:5173/data/traj.dcd
 ```
 
 ## 📚 References
@@ -389,7 +370,6 @@ curl -I http://127.0.0.1:8080/data/traj.dcd
 - 📖 [OpenMM Documentation](http://docs.openmm.org/)
 - 🎨 [Babylon.js Documentation](https://doc.babylonjs.com/)
 - 📄 [CHARMM DCD Specification](https://www.ks.uiuc.edu/Research/vmd/plugins/molfile/dcdplugin.html)
-- 🌐 [MDsrv Documentation](https://github.com/arose/mdsrv)
 
 ## 📜 License
 
@@ -400,7 +380,7 @@ MIT License - see LICENSE file for details 🎉
 - 🧪 Built with [OpenMM](https://openmm.org/)
 - 🎨 Visualization powered by [Babylon.js](https://www.babylonjs.com/)
 - 🧬 Test protein from PDB (1erm beta-lactamase)
-- 🌐 File serving via [MDsrv](https://github.com/arose/mdsrv)
+- 💻 Simple Express server for file serving
 - 💡 Inspired by PyMOL and ChimeraX (but in a browser with FPS controls)
 - ☕ Coded at 3am (as all good projects are)
 - 🐱 Emotional support provided by cats
