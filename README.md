@@ -388,6 +388,6 @@ MIT License - see LICENSE file for details 🎉
 
 ---
 
-*made with 💕 and way too much caffeine*
+*made with 💕 and way too little caffeine*
 
 *if you found this useful (or cursed), consider starring ⭐*
